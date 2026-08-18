@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#07111f" />
+  <title>MarineFlow — Marine Piping Calculator</title>
+  <meta name="description" content="Fast marine piping hydraulic calculations for pressure loss, velocity and pump head." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#">
+        <span class="brand-mark">MF</span>
+        <span><strong>MarineFlow</strong><small>Hydraulic Design Lab</small></span>
+      </a>
+      <div class="top-actions">
+        <span class="status-dot"><i></i> Calculation engine online</span>
+        <button class="ghost" id="resetBtn">Reset</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <span class="eyebrow">MARINE ENGINEERING · PROTOTYPE V0.1</span>
+          <h1>Size the line.<br><span>Know the loss.</span></h1>
+          <p>Fast first-pass hydraulic calculations for seawater, chilled water, fresh water and other incompressible marine systems.</p>
+        </div>
+        <div class="hero-badge">
+          <span>Method</span>
+          <strong>Darcy–Weisbach</strong>
+          <small>with Reynolds-based friction factor</small>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="panel input-panel">
+          <div class="panel-head">
+            <div><span class="step">01</span><h2>System inputs</h2></div>
+            <span class="chip">Single Pipe</span>
+          </div>
+
+          <div class="preset-row" id="systemPresets">
+            <button data-preset="seawater" class="active">Sea Water</button>
+            <button data-preset="chilled">Chilled Water</button>
+            <button data-preset="fresh">Fresh Water</button>
+          </div>
+
+          <div class="form-grid">
+            <label>Fluid
+              <select id="fluid">
+                <option value="seawater">Sea Water · 20°C</option>
+                <option value="water">Fresh Water · 20°C</option>
+                <option value="chilled">Chilled Water · 7°C</option>
+              </select>
+            </label>
+            <label>Pipe material
+              <select id="material">
+                <option value="cunifer">CuNi 90/10</option>
+                <option value="stainless">Stainless Steel 316L</option>
+                <option value="carbon">Carbon Steel</option>
+                <option value="hdpe">HDPE</option>
+              </select>
+            </label>
+            <label>Flow rate <span>m³/h</span>
+              <input id="flow" type="number" min="0.1" step="0.1" value="45" />
+            </label>
+            <label>Internal diameter <span>mm</span>
+              <input id="diameter" type="number" min="5" step="1" value="80" />
+            </label>
+            <label>Pipe length <span>m</span>
+              <input id="length" type="number" min="0" step="0.1" value="38" />
+            </label>
+            <label>Elevation change <span>m</span>
+              <input id="elevation" type="number" step="0.1" value="4.2" />
+            </label>
+          </div>
+
+          <div class="divider"><span>Fittings & equipment</span></div>
+          <div class="fittings">
+            <label><span>90° elbow</span><input id="elbow" type="number" min="0" step="1" value="6"></label>
+            <label><span>Butterfly valve</span><input id="butterfly" type="number" min="0" step="1" value="2"></label>
+            <label><span>Non-return valve</span><input id="nrv" type="number" min="0" step="1" value="1"></label>
+            <label><span>Strainer</span><input id="strainer" type="number" min="0" step="1" value="1"></label>
+          </div>
+
+          <button class="primary" id="calculateBtn">Calculate system <span>→</span></button>
+          <p class="note">Prototype values are for concept/design checks only. Verify project-critical results independently.</p>
+        </aside>
+
+        <section class="results-wrap">
+          <div class="panel results-panel">
+            <div class="panel-head">
+              <div><span class="step">02</span><h2>Hydraulic result</h2></div>
+              <span class="chip success" id="resultStatus">Within target</span>
+            </div>
+
+            <div class="headline-result">
+              <div>
+                <span>TOTAL REQUIRED HEAD</span>
+                <strong id="totalHead">—</strong>
+                <small>m fluid column</small>
+              </div>
+              <div class="pressure-result">
+                <span>TOTAL ΔP</span>
+                <strong id="totalPressure">—</strong>
+                <small>bar</small>
+              </div>
+            </div>
+
+            <div class="metric-grid">
+              <article><span>Velocity</span><strong id="velocity">—</strong><small>m/s</small></article>
+              <article><span>Reynolds</span><strong id="reynolds">—</strong><small id="regime">—</small></article>
+              <article><span>Friction factor</span><strong id="friction">—</strong><small>Darcy</small></article>
+              <article><span>Dynamic head</span><strong id="dynamicHead">—</strong><small>m</small></article>
+            </div>
+
+            <div class="loss-card">
+              <div class="loss-head"><h3>Head-loss breakdown</h3><span id="lossTotalLabel">0.00 m</span></div>
+              <div class="loss-row"><span>Pipe friction</span><div class="bar"><i id="pipeBar"></i></div><strong id="pipeLoss">—</strong></div>
+              <div class="loss-row"><span>Fittings</span><div class="bar"><i id="fittingBar"></i></div><strong id="fittingLoss">—</strong></div>
+              <div class="loss-row"><span>Static head</span><div class="bar"><i id="staticBar"></i></div><strong id="staticLoss">—</strong></div>
+            </div>
+
+            <div class="engineering-check" id="engineeringCheck">
+              <span class="check-icon">✓</span>
+              <div><strong>Velocity check</strong><p id="checkText">Enter system data to evaluate the line.</p></div>
+            </div>
+          </div>
+
+          <div class="panel visual-panel">
+            <div class="visual-head"><div><span class="step">03</span><h2>System preview</h2></div><span class="muted">Concept schematic</span></div>
+            <div class="schematic">
+              <div class="tank"><span>SEA CHEST</span></div>
+              <div class="pipe-line"><i></i></div>
+              <div class="pump"><span>P</span></div>
+              <div class="pipe-line long"><i></i></div>
+              <div class="hx"><span>HX</span></div>
+              <div class="pipe-line"><i></i></div>
+              <div class="tank outlet"><span>OVERBOARD</span></div>
+            </div>
+            <div class="schematic-meta"><span>Design flow <strong id="diagramFlow">45.0 m³/h</strong></span><span>Line <strong id="diagramLine">Ø80 mm</strong></span><span>Pump min. <strong id="diagramPump">— m</strong></span></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer><span>MarineFlow v0.1</span><span>Built for marine piping design workflows</span></footer>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
