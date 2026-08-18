@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#07111f" />
   <title>MarineFlow — Marine Piping Calculator</title>
-  <meta name="description" content="Fast marine piping hydraulic calculations for pressure loss, velocity and pump head." />
+  <meta name="description" content="Marine piping hydraulic calculations with drawing-assisted line extraction." />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -24,14 +24,68 @@
     <main>
       <section class="hero">
         <div>
-          <span class="eyebrow">MARINE ENGINEERING · PROTOTYPE V0.1</span>
-          <h1>Size the line.<br><span>Know the loss.</span></h1>
-          <p>Fast first-pass hydraulic calculations for seawater, chilled water, fresh water and other incompressible marine systems.</p>
+          <span class="eyebrow">MARINE ENGINEERING · PROTOTYPE V0.2</span>
+          <h1>Upload the drawing.<br><span>Select the line. Calculate.</span></h1>
+          <p>Extract a piping line from PDF/DXF drawings, review detected components, then run a first-pass hydraulic calculation.</p>
         </div>
         <div class="hero-badge">
-          <span>Method</span>
-          <strong>Darcy–Weisbach</strong>
-          <small>with Reynolds-based friction factor</small>
+          <span>Workflow</span>
+          <strong>Drawing → Line Model</strong>
+          <small>review before hydraulic calculation</small>
+        </div>
+      </section>
+
+      <section class="drawing-lab panel">
+        <div class="drawing-head">
+          <div><span class="step">00</span><div><h2>Drawing Intelligence</h2><p>PDF / DXF / drawing-assisted line extraction</p></div></div>
+          <span class="chip beta">Prototype AI detection</span>
+        </div>
+
+        <div class="drawing-grid">
+          <div class="upload-zone" id="uploadZone">
+            <input id="drawingFile" type="file" accept=".pdf,.dxf,.dwg,.png,.jpg,.jpeg" hidden>
+            <div class="upload-icon">↥</div>
+            <strong id="uploadTitle">Drop drawing here or choose file</strong>
+            <p id="uploadMeta">PDF and DXF recommended · DWG workflow planned through conversion</p>
+            <button class="secondary" id="chooseFileBtn">Choose drawing</button>
+          </div>
+
+          <div class="drawing-preview" id="drawingPreview">
+            <div class="preview-toolbar"><span id="previewFileName">No drawing loaded</span><span id="previewState">Waiting</span></div>
+            <div class="mini-drawing">
+              <div class="grid-lines"></div>
+              <span class="tag tag-pump">P-201</span>
+              <span class="tag tag-valve">V-12</span>
+              <span class="tag tag-hx">HX-301</span>
+              <div class="route r1"></div><div class="route r2"></div><div class="route r3"></div><div class="route r4"></div>
+              <span class="line-label">SW-2101 · DN100</span>
+            </div>
+            <button class="primary detect-btn" id="detectBtn" disabled>Auto-detect selected line <span>→</span></button>
+          </div>
+        </div>
+
+        <div class="detect-results hidden" id="detectResults">
+          <div class="detect-summary">
+            <div><span>SELECTED LINE</span><strong>SW-2101</strong><small>Sea Water Cooling</small></div>
+            <div><span>DETECTED</span><strong id="detectedCount">—</strong><small>components + pipe run</small></div>
+            <div><span>MODEL CONFIDENCE</span><strong id="modelConfidence">—</strong><small>review low-confidence items</small></div>
+            <button class="secondary" id="applyDetectedBtn">Apply to calculator</button>
+          </div>
+
+          <div class="component-table-wrap">
+            <table class="component-table">
+              <thead><tr><th>Detected item</th><th>Qty / length</th><th>Interpretation</th><th>Confidence</th></tr></thead>
+              <tbody id="componentBody"></tbody>
+            </table>
+          </div>
+
+          <div class="line-trace">
+            <div class="trace-title"><span>Extracted line path</span><strong>Sea Chest → P-201 → V-12 → Strainer → HX-301 → Overboard</strong></div>
+            <div class="trace-flow">
+              <span>SEA CHEST</span><i></i><span>P-201</span><i></i><span>BV</span><i></i><span>STR</span><i></i><span>HX-301</span><i></i><span>OVERBOARD</span>
+            </div>
+          </div>
+          <p class="prototype-note">V0.2 demonstrates the review workflow. The browser currently creates a sample extraction after a drawing is selected; production PDF/DXF geometry parsing and symbol recognition are the next implementation layer.</p>
         </div>
       </section>
 
@@ -39,7 +93,7 @@
         <aside class="panel input-panel">
           <div class="panel-head">
             <div><span class="step">01</span><h2>System inputs</h2></div>
-            <span class="chip">Single Pipe</span>
+            <span class="chip" id="inputSourceChip">Manual input</span>
           </div>
 
           <div class="preset-row" id="systemPresets">
@@ -98,16 +152,8 @@
             </div>
 
             <div class="headline-result">
-              <div>
-                <span>TOTAL REQUIRED HEAD</span>
-                <strong id="totalHead">—</strong>
-                <small>m fluid column</small>
-              </div>
-              <div class="pressure-result">
-                <span>TOTAL ΔP</span>
-                <strong id="totalPressure">—</strong>
-                <small>bar</small>
-              </div>
+              <div><span>TOTAL REQUIRED HEAD</span><strong id="totalHead">—</strong><small>m fluid column</small></div>
+              <div class="pressure-result"><span>TOTAL ΔP</span><strong id="totalPressure">—</strong><small>bar</small></div>
             </div>
 
             <div class="metric-grid">
@@ -131,15 +177,9 @@
           </div>
 
           <div class="panel visual-panel">
-            <div class="visual-head"><div><span class="step">03</span><h2>System preview</h2></div><span class="muted">Concept schematic</span></div>
+            <div class="visual-head"><div><span class="step">03</span><h2>System preview</h2></div><span class="muted">Extracted / manual model</span></div>
             <div class="schematic">
-              <div class="tank"><span>SEA CHEST</span></div>
-              <div class="pipe-line"><i></i></div>
-              <div class="pump"><span>P</span></div>
-              <div class="pipe-line long"><i></i></div>
-              <div class="hx"><span>HX</span></div>
-              <div class="pipe-line"><i></i></div>
-              <div class="tank outlet"><span>OVERBOARD</span></div>
+              <div class="tank"><span>SEA CHEST</span></div><div class="pipe-line"><i></i></div><div class="pump"><span>P</span></div><div class="pipe-line long"><i></i></div><div class="hx"><span>HX</span></div><div class="pipe-line"><i></i></div><div class="tank outlet"><span>OVERBOARD</span></div>
             </div>
             <div class="schematic-meta"><span>Design flow <strong id="diagramFlow">45.0 m³/h</strong></span><span>Line <strong id="diagramLine">Ø80 mm</strong></span><span>Pump min. <strong id="diagramPump">— m</strong></span></div>
           </div>
@@ -147,7 +187,7 @@
       </section>
     </main>
 
-    <footer><span>MarineFlow v0.1</span><span>Built for marine piping design workflows</span></footer>
+    <footer><span>MarineFlow v0.2</span><span>Drawing-assisted marine piping design workflow</span></footer>
   </div>
   <script src="./app.js"></script>
 </body>
